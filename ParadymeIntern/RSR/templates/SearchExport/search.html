@@ -120,8 +120,9 @@
             <div class = "row">
                 <fieldset>
                 <legend style="color:#FFF">Skills/Awards</legend>
-                <button type="button" onclick="myFunction('skills','skills_and')" style="color:blue"
-                class="form-group col-sm-1 col-md-1">Click me to switch skills</button>
+                <!--<button type="button" onclick="myFunction('skills','skills_and')" style="color:blue"
+                class="form-group col-sm-1 col-md-1">Click me to switch skills</button>-->
+
                 <div id="skills" class="form-group col-sm-3 col-md-3">
                     Skills:
                     {% render_field personFilter.form.Skills class="form-control" %}
@@ -133,6 +134,10 @@
                 <div class="form-group col-sm-3 col-md-3">
                     Year of experience for skill:
                     {% render_field personFilter.form.YearOfExperienceForSkill class="form-control" %}
+                </div>
+                <div class="form-group col-sm-3 col-md-3">
+                    Skill Level:
+                    {% render_field personFilter.form.Level class="form-control" %}
                 </div>
                 <div class="form-group col-sm-3 col-md-3">
                     Language Spoken:

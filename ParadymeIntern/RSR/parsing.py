@@ -22,6 +22,7 @@ from gensim.models import Word2Vec
 import json
 import re
 from datetime import date, datetime
+from dateutil import parser
 import datefinder
 from google.cloud import language
 from google.cloud.language import enums
@@ -41,7 +42,6 @@ from oauth2client import tools
 #main function goes through all different extraction and puts it into a dictionary so it can be put into the database
 def parse_file(resume):
     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(os.path.dirname(__file__),'Parsing-385521996355.json')
-    print("WTF this was working yesterday",os.environ['GOOGLE_APPLICATION_CREDENTIALS'])
     credentials = ServiceAccountCredentials.from_json_keyfile_name(os.path.join(os.path.dirname(__file__),'Parsing-385521996355.json'), scopes='https://www.googleapis.com/auth/cloud-language')
     #credentials = ServiceAccountCredentials.from_json_keyfile_name('/home/jared/Parsing-385521996355.json',scopes ='https://www.googleapis.com/auth/cloud-language' )
     client = language_v1beta2.LanguageServiceClient()
@@ -200,10 +200,10 @@ def extract_date(input_string):
         return ('No dates found')
 
 def extract_university_date(resume,ent):
-    university_list = extract_university_google(resume,ent)
+    university_list = merge_school(resume,ent)
     University_Index = {'Name': 5}
     for i, element in enumerate(university_list):
-        x = resume.find(element)
+        x = resume.lower().find(element)
         University_Index[element] = x
 
     del University_Index['Name']
@@ -457,19 +457,37 @@ def extract_university_google(resume,entities):
     print("Schools:",final_list_of_school)
     return final_list_of_school
 
-# def extract_university(resume_token_lower,university_combined):
-#     unigram_university = get_university(resume_token_lower, university_combined)
-#     bigram_university = get_university(get_bigrams(resume_token_lower), university_combined)
-#     threegram_university = get_university(get_threegrams(resume_token_lower), university_combined)
-#     fourgram_university = get_university(get_fourgrams(resume_token_lower), university_combined)
-#     fivegram_university = get_university(get_fivegrams(resume_token_lower), university_combined)
-#     sixgram_university = get_university(get_sixgrams(resume_token_lower), university_combined)
-#     combined_university_extraction = list(bigram_university + threegram_university + fourgram_university + fivegram_university + sixgram_university)
-#     print('UNI: ', bigram_university,threegram_university,fourgram_university)
-#     return combined_university_extraction
+def extract_university(resume_token_lower,university_combined):
+    unigram_university = get_university(resume_token_lower, university_combined)
+    bigram_university = get_university(get_bigrams(resume_token_lower), university_combined)
+    threegram_university = get_university(get_threegrams(resume_token_lower), university_combined)
+    fourgram_university = get_university(get_fourgrams(resume_token_lower), university_combined)
+    fivegram_university = get_university(get_fivegrams(resume_token_lower), university_combined)
+    sixgram_university = get_university(get_sixgrams(resume_token_lower), university_combined)
+    combined_university_extraction = list(set(bigram_university + threegram_university + fourgram_university + fivegram_university + sixgram_university))
+    print('UNI: ', bigram_university,threegram_university,fourgram_university)
+    return combined_university_extraction
 
-#execution of extracting university:
-
+#merge results from the two extraction
+def merge_school(resume,ent):
+    a = extract_university_google(resume,ent)
+    tokenizer = RegexpTokenizer(r'\w+')
+    resume_token = tokenizer.tokenize(resume)
+    resume_token_lower = [item.lower() for item in resume_token]
+    university_df1 = pandas.read_excel(os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..','..','www','Parsing','China_University.xlsx')))
+    university_df2 = pandas.read_excel(os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..','..','www','Parsing','India_University.xlsx')))
+    university_df3 = pandas.read_excel(os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..','..','www','Parsing','US_University.xlsx')))
+    university_file1 = university_df1['Universities'].values
+    university_file2 = university_df2['Universities'].values
+    university_file3 = university_df3['Universities'].values
+    university_lower1 = [item.lower() for item in university_file1]
+    university_lower2 = [item.lower() for item in university_file2]
+    university_lower3 = [item.lower() for item in university_file3]
+    university_combined = university_lower1 + university_lower2 + university_lower3
+    b = extract_university(resume_token_lower,university_combined)
+    c = [item.lower() for item in a]
+    d = list(dedupe (b + c))
+    return (d)
 #extract GPA:
 def extract_GPA(resume):
     result = re.search(r'(GPA|gpa):( ?\d.\d{1,})',resume)
@@ -526,8 +544,8 @@ def extract_company(resume,ent):
         where_you_worked['company'] = 'could not parse'
         where_you_worked['title'] = 'could not parse'
         where_you_worked['experience'] = 'could not parse'
-        # where_you_worked['startDate'] = datetime.now().date
-        # where_you_worked['endDate'] = datetime.now().date
+        where_you_worked['startDate'] = None
+        where_you_worked['endDate'] =  None
         where_you_worked['summary'] =' could not parse'
         return [where_you_worked]
 
@@ -552,8 +570,15 @@ def extract_company(resume,ent):
         where_you_worked['company'] = i['company']
         where_you_worked['title'] = 'Needs to be added'
         where_you_worked['experience'] = 'Needs to be added'
-        # where_you_worked['startDate'] = datetime.now().date
-        # where_you_worked['endDate'] = datetime.now().date
+        print("Looking at: ",i['startDate'])
+        try:
+            where_you_worked['startDate'] = parser.parse(i['startDate'])
+        except (TypeError, ValueError) as error:
+            where_you_worked['startDate'] = None
+        try:
+            where_you_worked['endDate'] = parser.parse(i['endDate'])
+        except (TypeError, ValueError) as error:
+            where_you_worked['endDate'] = None
         where_you_worked['summary'] = i['summary']
         final.append(where_you_worked)
 
@@ -571,7 +596,60 @@ def find_exp_header (resume,experience_list):
     exp_header = list(dedupe(exp_header_list))
     return exp_header
 
+def extract_company_date(resume):
+    company_list = extract_company(resume)
+    #company_list = ["Paradyme Management","Wells Fargo Home Mortgage"]
+    Company_Index = {'Name': 5}
+    for i, element in enumerate(company_list):
+        x = resume.find(element)
+        Company_Index[element] = x
 
+    del Company_Index['Name']
+    #print(Company_Index)
+
+    company_upper_bound=[]
+    company_list=[]
+    for key, value in Company_Index.items():
+        aValue = value
+        aKey = key
+        company_upper_bound.append(aValue)
+        company_list.append(aKey)
+    #print(company_upper_bound)
+
+    company_lower_bound=[]
+    for i in company_upper_bound:
+        i += 120
+        company_lower_bound.append(i)
+    #print (company_lower_bound)
+
+    sub_resume=[]
+    for i in range(0,len(index_pair)):
+        sub_resume.append(resume[index_pair[i][0]:index_pair[i][1]])
+    #print(sub_resume)
+
+    date_pattern="(\d{1,2}(?:\s|-|/)?(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May?|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|\d{1,2})(?:\s|-|/)?\d{2,4})"
+    dates = []
+    for i in sub_resume:
+        matches = re.findall(date_pattern, i)
+        dates.append(matches)
+    #print(dates)
+
+    for i in dates:
+        if len(dates[0]) ==2:
+            dates[0]= ['-'.join(dates[0])]
+    #print(dates)
+
+    dates = [''.join(x) for x in dates]
+    #print(dates)
+
+    company_date=[]
+    for i in range(0,len(company_list)):
+        company_date.append(company_list[i])
+        company_date.append(dates[i])
+    #print(company_date)
+
+    company_date_pair = [(company_date[i],company_date[i+1]) for i in range(0,len(company_date),2)]
+    return(company_date_pair)
 
 #Find next section header
 def find_next_section (resume,exp_header):
@@ -612,15 +690,23 @@ def get_exp_info(work_exp,ent):
     print('In get exp')
     company_info= []
     temp_str=''
+    regex  = r"(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May?|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)?(\d{1,2}|(?:\s|-|/)?\d{2,4})"
+
     for i, sent in enumerate(work_exp):
         if sent != '':
-            find_Dates = re.findall('\d{4}|9\d{1}|Present|present',sent)
+            find_Dates = re.findall(regex,sent)
+
             if  len(find_Dates)>1:
                 comp = {}
                 comp['company'] = 'Could not parse'
+                comp['startDate'] = None
+                comp['endDate'] = None
                 for e in ent:
                     if sent.find(e.name)!= -1:
                         comp['company'] = e.name
+                        comp['startDate'] = find_Dates[0][0]+find_Dates[0][1]
+                        comp['endDate'] = find_Dates[1][0]+find_Dates[1][1]
+                        print("NEW NAME AND DATES",e.name,comp['startDate'])
 
                 print('Sent is',sent)
                 comp['summary']=temp_str

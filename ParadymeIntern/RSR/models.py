@@ -306,8 +306,8 @@ class PersonToCompany(models.Model):
     CompanyID = models.ForeignKey(Company,  on_delete=models.CASCADE)
     Title = models.CharField("Title", max_length=100, default="None")
     ExperienceOnJob = models.CharField("Experience on Job", max_length=300, default="None")
-    StartDate = models.DateField("Start Date", default=datetime.now().date)
-    EndDate = models.DateField("End Date", default=datetime.now().date)
+    StartDate = models.DateField("Start Date", blank = True,null = True)
+    EndDate = models.DateField("End Date",blank = True,null = True)
     Desc = models.CharField("Company Description", max_length=1000, default="None")
 
 
@@ -346,13 +346,25 @@ class PersonToSide(models.Model):
 
 
 class PersonToSkills(models.Model):
-
+    Levels = (
+    ('0','0'),
+    ('1', '1'),
+    ('2', '1'),
+    ('3', '3'),
+    ('4', '4'),
+    ('5','5'),
+    ('6', '6'),
+    ('7', '7'),
+    ('8', '8'),
+    ('9', '9'),
+    ('10','10')
+)
     def __str__(self):
         return self.PersonID.Name + ' - ' + self.SkillsID.Name
     YearsOfExperience = models.CharField("Years Of Experience", max_length=3,default = 1)
     SkillsID = models.ForeignKey(Skills,  on_delete=models.CASCADE)
     PersonID = models.ForeignKey(Person,  on_delete=models.CASCADE)
-
+    Level = models.CharField(verbose_name = "Level",max_length = 50, choices = Levels, default = '0')
 
 class PersonToLanguage(models.Model):
     def __str__(self):

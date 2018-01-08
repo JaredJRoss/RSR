@@ -10,8 +10,7 @@ class UploadListFilter(django_filters.FilterSet):
   ('Intern', 'Intern'),
   ('Prospective Employee', 'Prospective Employee'),
   ('Prospective Intern', 'Prospective Intern'),
-
-)
+  )
 
   type = django_filters.ChoiceFilter(choices=TYPERESUME_CHOICES)
   class Meta:
@@ -34,6 +33,19 @@ class PersonFilter(django_filters.FilterSet):
     ('Prospective Employee', 'Prospective Employee'),
     ('Prospective Intern', 'Prospective Intern'))
 
+    Levels = (
+    ('0','0'),
+    ('1', '1'),
+    ('2', '1'),
+    ('3', '3'),
+    ('4', '4'),
+    ('5','5'),
+    ('6', '6'),
+    ('7', '7'),
+    ('8', '8'),
+    ('9', '9'),
+    ('10','10')
+)
     TypeResume = django_filters.ChoiceFilter(name='TypeResume', choices=TYPERESUME_CHOICES)
 
     UploadDate = django_filters.DateFilter(name='CreationDate',input_formats=['%Y-%m-%d', '%m-%d-%Y', '%Y/%m/%d','%m/%d/%Y', '%Y%m%d', '%m%d%Y']\
@@ -93,10 +105,11 @@ class PersonFilter(django_filters.FilterSet):
     WorkAuthorization = django_filters.ChoiceFilter(name='WorkAuthorization', choices=WORKAUTHORIZATION_CHOICES)
     Name = django_filters.ModelMultipleChoiceFilter(name='Name', queryset=Person.objects.all(),
                                           widget=autocomplete.ModelSelect2Multiple(url='RSR:Name-autocomplete'))
-
+    Level = django_filters.ModelChoiceFilter(name='persontoskills__Level',queryset=PersonToSkills.objects.values_list('Level',flat=True).
+    order_by('Level').distinct(),to_field_name='Level')
 
     class Meta:
         model = Person
         fields = ['SchoolAttend', 'GraduateDate', 'Major', 'DegreeLevel', 'GPAlb', 'GPAub','Language', 'Skills',
                    'YearOfExperienceForSkill', 'ProfessionalDevelopment', 'Award', 'CompanyWorked', 'Title',
-                   'SecurityClearance', 'Volunteering', 'Club_Hobby','TypeResume','UploadDate','Name', 'Skills_AND']
+                   'SecurityClearance', 'Volunteering', 'Club_Hobby','TypeResume','UploadDate','Name', 'Skills_AND','Level']

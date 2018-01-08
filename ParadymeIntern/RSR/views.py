@@ -333,31 +333,12 @@ def uploaddoc(request):
         print(request.FILES)
         files = request.FILES.getlist('docfile')
         print("File list",files)
-        if 1==1:
-            temp_doc = Document(docfile=request.FILES['docfile'])
+        for f in files:
+            temp_doc = Document(docfile = f)
             temp_doc.type = request.POST['type']
             temp_doc.uploaduser = request.user.username
-
             temp_doc.save()
-
-        # for f in files:
-        #     form = DocumentForm(request.POST, f)
-        #     print("Form is ",form)
-        #     if form.is_valid():
-        #
-        #         #### PARSING TEAM = AT THE END OF THE NEXT LINES, USE
-        #         #### temp_doc.wordstr TO GRAB STRING ####
-        #
-        #         temp_doc = Document(docfile=request.FILES['docfile'])
-        #
-        #         #temp_doc.firstname = Document(docfile=request.POST.get('firstname'))
-        #         #temp_doc.lastname = Document(docfile=request.POST.get('lastname'))
-        #         #temp_doc.type = Document(docfile=request.POST.get('type'))
-        #         temp_doc.type = request.POST['type']
-        #         temp_doc.uploaduser = request.user.username
-        #
-        #         temp_doc.save()
-
+            print('whats up doc', temp_doc.docfile.path)
             if ".doc" in temp_doc.docfile.path:
                 print (temp_doc.docfile.path)
                 temp_doc.wordstr = parse_word_file(temp_doc.docfile.path)
@@ -380,13 +361,11 @@ def uploaddoc(request):
                     temp_doc.save(update_fields=['wordstr'])
 
                 temp_doc.save(update_fields=['wordstr'])
-            print ('CHECK ME',type(temp_doc.wordstr))
             parse_back(temp_doc.wordstr,temp_doc.docfile.path,temp_doc.type)
     else:
         form = DocumentForm()
     documents = Document.objects.all()
     return render(request,'index.html',{'documents': documents,'form':form})
-
 
 
 #edit function
@@ -806,7 +785,6 @@ def detail(request,pk):
         person.save(update_fields=['LastUpdated'])
         skillform.save(commit=False)
         query_set = Skills.objects.all()
-
 
         if not query_set.filter(Name=skillform.cleaned_data['Name']):
             skillform.save()
